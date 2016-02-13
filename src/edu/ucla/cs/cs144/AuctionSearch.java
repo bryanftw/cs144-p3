@@ -141,13 +141,121 @@ public class AuctionSearch implements IAuctionSearch {
         return new SearchResult[0];
 	}
 
-	public String getXMLDataForItemId(String itemId) {
-		// TODO: Your code here!
-		return "";
+	public String escapeString(String input) {
+		String output = input;		
+		output.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("&", "&amp;").replaceAll("\"", "&quot;").replaceAll("'", "&apos;");	
+		return output;
 	}
+
+	public String getXMLDataForItemId(String itemID) {
+        String result = "";
+
+        try {
+            Connection conn = DbManager.getConnection(true);
+
+            Statement itemsStatement = conn.createStatement();
+            ResultSet itemsResult = itemsStatement.executeQuery("SELECT * FROM Items WHERE ItemID = " + itemID + ";");
+
+            if (itemsResult.next()) {
+                // Item
+                result += "<Item ItemID=\"" + itemID + "\">\n";
+
+                // Name
+                result += "<Name>" + itemsResult.getString("Name") + "</Name>\n";
+
+                // Category
+                Statement itemCategoriesStatement = conn.createStatement();
+                ResultSet itemCategoriesResult = itemCategoriesStatement.executeQuery("SELECT * FROM ItemCategories WHERE ItemID = " + itemID + ";");
+                while (itemCategoriesResult.next()) {
+                	result += "<Category>" + escapeString(itemCategoriesResult.getString("Category")) + "</Category>\n";
+                }
+
+                // Currently
+                String currently = String.format("$%.2f",itemResult.getFloat("Currently"));
+                result += "<Currently>" + currently + "</Currently>\n";
+
+                // Buy Price
+                String buyPrice = String.format("$%.2f", itemResult.getFloat("BuyPrice"));
+                if(!buyPrice.equals("$0.00"))
+                	result += "<Buy_Price>" + buyPrice + "</Buy_Price>\n";
+            
+            	// First Bid
+            	String firstBid = String.format("$%.2f", itemResult.getFloat("FirstBid"));
+            	result += "<First_Bid>" + firstBid + "</First_Bid>\n";
+
+                // Number of Bids
+                int numberOfBids = itemsResult.getInt("NumberOfBids");
+                result += "<Number_of_Bids>" + numberOfBids + "</Number_of_Bids>\n";
+
+                // Bids
+                if(numberOfBids == 0){
+                	result += "<Bids />\n"
+                }
+                else{
+					Statement bidsStatement = conn.createStatement();
+					ResultSet bidsResult = bidsStatement.executeQuery("SELECT * FROM Bids WHERE ItemID = " + itemID + ";");
+					result += "<Bids>\n";
+					while (bidsResult.next()) {
+						result += "<Bid>\n";
+						String bidderID = escapeString(bidsResult.getString("BidderID"));
+						String amount = escapeString(bidsResult.getString("Amount"));
 	
+						Statement bidderStatement = conn.createStatement();
+						ResultSet bidderResult = bidderStatement.executeQuery("SELECT * FROM Bidders WHERE UserID = " + bidderID + ";");
+						
+						if (bidderResult.next()) {	
+							result += "<Bidder Rating=\"" + escapeString(bidderResult.getString("Rating")) + "\" UserID=\"" + bidderID + "\">\n";
+							result += "<Location>" + escapeString(bidderResult.getString("Location")) + "</Location>\n";;
+							result += "<Country>" + escapeString(bidderResult.getString("Country")) + "</Country>\n";
+							result += "</Bidder>\n";
+						}
+	
+						result += "<Time>" + escapeString(formatDate(bidsResult.getTimestamp("Time").toString())) + "</Time>\n";
+						result += "<Amount>" + String.format("$%.2f",bidsResult.getFloat("Amount")) + "</Amount>\n";					
+						result += "</Bid>\n";
+					}
+					result += "</Bids>\n";
+                }
+
+                // Location
+                String location = escapeString(itemsResult.getString("Location"));
+                String latitude = escapeString(itemsResult.getString("Latitude"));
+                String longitude = escapeString(itemsResult.getString("Longitude"));
+                if (latitude.equals(""))
+                    result += "<Location>" + location + "</Location>"\n;
+                else {
+                    result += "<Location Latitude=\"" + latitude + "\" Longitude ='\"" + longitude + "\">" + location + "</Location>" + "\n";
+                }
+
+                // Country, Started, Ends
+				result += "<Country>" + escapeString(itemResult.getString("Country")) + "</Country>\n";
+				result += "<Started>" + formatDate(itemResult.getTimestamp("Started").toString()) + "</Started>\n";
+				result += "<Ends>" + formatDate(itemResult.getTimestamp("Ends").toString()) + "</Ends>\n";
+
+                // Seller
+                String seller = escapeString(itemsResult.getString("SellerID"));
+                Statement sellerStatement = conn.createStatement();
+                ResultSet sellerResult = sellerStatement.executeQuery("SELECT * FROM Sellers WHERE UserID = " + seller + ";");
+                if (sellerResult.next()) {
+                    result = result + "<Seller Rating=\"" + escapeString(sellerResult.getString("Rating")) + "\" UserID=\"" + seller + "\" />\n";
+                }
+
+                // Description
+                result += "<Description>" + escapeString(itemsResult.getString("Description")) + "</Description>\n";
+                
+                result += "</Item>";
+            }          
+            conn.close();
+        } 
+        catch (SQLException e) {
+            System.out.println(e);
+        }
+        finally{
+        	return result;
+        }
+	}
+
 	public String echo(String message) {
 		return message;
 	}
-
 }
