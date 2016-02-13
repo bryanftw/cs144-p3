@@ -25,6 +25,7 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TopDocs;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.FieldCacheTermsFilter;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
@@ -55,16 +56,67 @@ public class AuctionSearch implements IAuctionSearch {
     
 	public SearchResult[] basicSearch(String query, int numResultsToSkip, 
 			int numResultsToReturn) {
-        System.out.printf("%s %d %d", query, numResultsToSkip, numResultsToReturn);
-		// TODO: Your code here!
+        //Call spatialSearch with no region
+        return spatialSearch(query, null, numResultsToSkip, numResultsToReturn);
+	}
+
+	public SearchResult[] spatialSearch(String query, SearchRegion region,
+			int numResultsToSkip, int numResultsToReturn) {
+		// Create a region filter
+        FieldCacheTermsFilter regionFilter = null;
+		if (region != null)
+        {
+            //open a connection and do spatial search
+            double lx, rx, ly, ry;
+            lx = region.getLx();
+            rx = region.getRx();
+            ly = region.getLy();
+            ry = region.getRy();
+            //make the query string
+            String spatialPoly = String.format("Set @poly = 'Polygon((%f %f, %f %f, %f %f, %f %f))';" , lx, ly, lx, ry, rx, ry, rx, ly);
+            //open database connection
+            Connection conn = null;
+            try {
+                conn = DbManager.getConnection(true);
+            } catch (SQLException ex) {
+                System.out.println(ex);
+            }
+            try {
+                Statement s = conn.createStatement() ;
+                ResultSet rs = s.executeQuery(spatialPoly);
+                rs = s.executeQuery( "SELECT ItemID, AsText(Coordinates) FROM ItemCoordinates WHERE MBRContains(GeomFromText(@poly),Coordinates);");
+                ArrayList<String> list = new ArrayList<String>();
+                while( rs.next() ){
+                    String id = rs.getString("ItemID");
+                    list.add(id);
+                }
+                String[] itemsInRegion = list.toArray(new String[list.size()]);
+                regionFilter = new FieldCacheTermsFilter("id", itemsInRegion);
+            }
+            catch (SQLException ex)
+            {System.out.println(ex);}
+            // close the database connection
+            try {
+                conn.close();
+            } catch (SQLException ex) {
+                System.out.println(ex);
+            }
+
+
+            
+        }
+        
+        //Search
         try {
             IndexSearcher searcher = new IndexSearcher(DirectoryReader.open(FSDirectory.open(new File("/var/lib/lucene/index1"))));
             QueryParser parser = new QueryParser("content", new StandardAnalyzer());
             Query parsedQuery = parser.parse(query);
-            TopDocs results = searcher.search(parsedQuery, numResultsToReturn + numResultsToSkip);
+            TopDocs results = searcher.search(parsedQuery, regionFilter, numResultsToReturn + numResultsToSkip);
             
             ScoreDoc[] hits = results.scoreDocs;
             
+            if (hits.length - numResultsToSkip < numResultsToReturn)
+                numResultsToReturn = hits.length;
             SearchResult[] returnResults = new SearchResult[numResultsToReturn];
             
             for(int i=0; i < numResultsToReturn; i++)
@@ -87,12 +139,6 @@ public class AuctionSearch implements IAuctionSearch {
         }
         
         return new SearchResult[0];
-	}
-
-	public SearchResult[] spatialSearch(String query, SearchRegion region,
-			int numResultsToSkip, int numResultsToReturn) {
-		// TODO: Your code here!
-		return new SearchResult[0];
 	}
 
 	public String getXMLDataForItemId(String itemId) {
