@@ -1,3 +1,1 @@
-DROP INDEX sp_index ON ItemCoordinates;
-
-DROP TABLE ItemCoordinates;
+DROP TABLE IF EXISTS ItemCoordinates;

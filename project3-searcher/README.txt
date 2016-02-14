@@ -1,0 +1,1 @@
+We had trouble with the spatial index and/or the spatial search, since we don't seem to be getting results for the latter.
