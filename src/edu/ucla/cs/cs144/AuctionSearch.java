@@ -232,16 +232,18 @@ public class AuctionSearch implements IAuctionSearch {
                 Statement sellerStatement = conn.createStatement();
                 ResultSet sellerResult = sellerStatement.executeQuery("SELECT * FROM Sellers WHERE UserID = \"" + seller + "\";");
                 
-                // Location
+                
                 if (sellerResult.next()) {
+                	// Location, Latitude, Longitude
 					String location = escapeString(sellerResult.getString("Location"));
 					String latitude = escapeString(sellerResult.getString("Latitude"));
 					String longitude = escapeString(sellerResult.getString("Longitude"));
-					if (latitude.equals("")){
-						result += "<Location>" + location + "</Location>\n";
+					
+					if(!latitude.equals("0.000000") && !longitude.equals("0.000000")){
+						result += "<Location Latitude=\"" + latitude + "\" Longitude ='\"" + longitude + "\">" + location + "</Location>\n";
 					}
 					else {
-						result += "<Location Latitude=\"" + latitude + "\" Longitude ='\"" + longitude + "\">" + location + "</Location>\n";
+						result += "<Location>" + location + "</Location>\n";
 					}
 	
 					// Country, Started, Ends
