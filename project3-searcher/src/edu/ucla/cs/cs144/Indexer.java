@@ -83,19 +83,19 @@ public class Indexer {
     // Select items joined with categories
     try {
     Statement s = conn.createStatement() ;
-    ResultSet rs = s.executeQuery("SELECT * FROM Items INNER JOIN ItemCategories on Items.ItemID = ItemCategories.ItemID ");
+    ResultSet rs = s.executeQuery("SELECT ItemID, Name, Description FROM Items");
     
     getIndexWriter(true);
     // Write all items into the index
     
-    String id, name, category, description;
+    String id, name, categories, description;
     int count = 0;
     
     while( rs.next() ){
         // Get record attributes
         id = rs.getString("ItemID");
         name = rs.getString("Name");
-        category = rs.getString("Category");
+
         description = rs.getString("Description");
         
         // Store into index
@@ -103,9 +103,17 @@ public class Indexer {
         Document doc = new Document();
         doc.add(new StringField("id", id, Field.Store.YES));
         doc.add(new StringField("name", name, Field.Store.YES));
-        doc.add(new StringField("category", category, Field.Store.YES));
         doc.add(new StringField("description", description, Field.Store.YES));
-        String fullSearchableText = name + " " + category + " " + description;
+        
+        Statement sCat = conn.createStatement() ;
+        ResultSet rsCat = sCat.executeQuery("SELECT Category FROM ItemCategories WHERE ItemID = " + id + ";");
+        categories = "";
+        while (rsCat.next()) {
+        	categories += rsCat.getString("Category") + " ";
+        }
+        doc.add(new StringField("categories", categories, Field.Store.YES));
+        
+        String fullSearchableText = name + " " + description + " " + categories;
         doc.add(new TextField("content", fullSearchableText, Field.Store.NO));
         writer.addDocument(doc);
         count++;
