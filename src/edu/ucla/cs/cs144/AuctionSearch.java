@@ -82,7 +82,7 @@ public class AuctionSearch implements IAuctionSearch {
                 System.out.println(ex);
             }
             try {
-                Statement s = conn.createStatement() ;
+                Statement s = conn.createStatement();
                 ResultSet rs = s.executeQuery(spatialPoly);
                 rs = s.executeQuery( "SELECT ItemID, AsText(Coordinates) FROM ItemCoordinates WHERE MBRContains(GeomFromText(@poly),Coordinates);");
                 ArrayList<String> list = new ArrayList<String>();
@@ -100,10 +100,7 @@ public class AuctionSearch implements IAuctionSearch {
                 conn.close();
             } catch (SQLException ex) {
                 System.out.println(ex);
-            }
-
-
-            
+            }           
         }
         
         //Search
@@ -141,7 +138,7 @@ public class AuctionSearch implements IAuctionSearch {
         return new SearchResult[0];
 	}
 
-	public String escapeString(String input) {
+	private String escapeString(String input) {
 		String output = input;		
 		output.replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll("&", "&amp;").replaceAll("\"", "&quot;").replaceAll("'", "&apos;");	
 		return output;

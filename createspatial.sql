@@ -1,6 +1,7 @@
-CREATE TABLE ItemCoordinates
+CREATE TABLE IF NOT EXISTS ItemCoordinates
 (   ItemID INT(11) NOT NULL,
     Coordinates POINT NOT NULL,
+    SPATIAL INDEX(Coordinates),
     PRIMARY KEY (ItemID)
 )   ENGINE=MyISAM;
 
@@ -9,4 +10,4 @@ INSERT INTO ItemCoordinates(ItemID, Coordinates)
     FROM Items INNER JOIN Sellers ON Items.SellerID = Sellers.UserID
     WHERE Latitude IS NOT NULL AND Longitude IS NOT NULL;
 
-CREATE SPATIAL INDEX sp_index ON ItemCoordinates(Coordinates);
+-- CREATE SPATIAL INDEX sp_index ON ItemCoordinates(Coordinates);
